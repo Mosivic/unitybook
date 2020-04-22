@@ -1,0 +1,106 @@
+using UnityEngine;
+using System.Collections;
+
+
+[RequireComponent(typeof(MeshFilter))]
+public class MeshWaterWave : MonoBehaviour
+{
+    public enum WaveType
+    {
+        none,
+        simple,
+        multiply,
+    }
+
+    [SerializeField] float scollSpeed = 0.1f;
+
+
+    //高度(振幅)
+    [SerializeField] float height = 0.5f;
+    //速度(初相)
+    [SerializeField] float speed = 1f;
+    //X/Z方向系数
+    [SerializeField, Range(-1, 1)] float xDirection = 1;
+    [SerializeField, Range(-1, 1)] float zDirection = 1;
+    //幅度(角速度)
+    [SerializeField, Range(0, 1)] float range = 1;
+    //方式
+    [SerializeField] WaveType waveType;
+    //Mesh及顶点
+    Mesh waveMesh;
+    Vector3[] baseVertex;
+    Vector3[] nowVertex;
+    float xOffset;
+    MeshRenderer meshRenderer;
+    new MeshCollider collider;
+
+    void Start()
+    {
+        waveMesh = GetComponent().mesh;
+        meshRenderer = GetComponent();
+        collider = GetComponent();
+
+        baseVertex = waveMesh.vertices;
+        nowVertex = new Vector3[baseVertex.Length];
+    }
+    void Update()
+    {
+        switch (waveType)
+        {
+            case WaveType.simple:
+                WaveSimple();
+                break;
+            case WaveType.multiply:
+                WaveMultiply();
+                break;
+            default:
+                break;
+        }
+    }
+    void StartWave(WaveType type)
+    {
+        waveType = type;
+    }
+    void ResetWave()
+    {
+        waveType = WaveType.none;
+        waveMesh.vertices = baseVertex;
+    }
+    //-----
+    void WaveSimple()
+    {
+        for (int i = 0; i < baseVertex.Length; i++)
+        {
+            nowVertex[i] = baseVertex[i];
+            nowVertex[i].y += Mathf.Sin((Time.time * speed + nowVertex[i].x * xDirection + nowVertex[i].z * zDirection) * range) * height;
+        }
+        waveMesh.vertices = nowVertex;
+        TextureScoll();
+        ColliderMeshUpdate();
+    }
+    void WaveMultiply()
+    {
+        for (int i = 0; i < baseVertex.Length; i++)
+        {
+            nowVertex[i] = baseVertex[i];
+            nowVertex[i].y += Mathf.Sin((Time.time * speed + baseVertex[i].x * xDirection) * range) * height + Mathf.Sin((Time.time * speed + baseVertex[i].z * zDirection) * range) * height;
+        }
+        waveMesh.vertices = nowVertex;
+        TextureScoll();
+        ColliderMeshUpdate();
+    }
+
+    //贴图滚动
+    void TextureScoll()
+    {
+        xOffset = Time.time * scollSpeed;
+        meshRenderer.material.SetTextureOffset("_MainTex", new Vector2(xOffset, 0));
+
+    }
+
+    //动态碰撞
+    void ColliderMeshUpdate()
+    {
+        collider.sharedMesh = waveMesh;
+    }
+}
